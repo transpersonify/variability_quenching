@@ -150,7 +150,7 @@ def between_trial_VQ(datapath,resultpath):
 
             vq = np.zeros((T))
             for t in range(T):
-                vq[:,:,t] = np.nanmean(pdist(trials[:,t,:].T,metric='correlation'))
+                vq[t] = np.nanmean(pdist(trials[:,t,:].T,metric='correlation'))
             vq_dist[conds[count]] = vq
         VQ[sub] = vq_dist
         spio.savemat(resultpath + '/' +  name[:-4] + '_vq.mat',vq_dist)
