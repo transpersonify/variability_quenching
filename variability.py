@@ -91,3 +91,68 @@ def flyby_dist(templatefile,datapath,resultpath):
         spio.savemat(resultpath + '/' +  name[:-4] + '_flybys.mat',dist)
 
     return D,keys
+
+def between_trial_VQ(datapath,resultpath):
+    """ Calculates and saves conditionwise between-trial variability i.e. average correlation distance between each trial-pairs at each time-point for each conditions separately.
+
+        INPUTS:
+
+        datapath: full path to where the '.mat' file for each subject is stored.
+        Each '.mat' file contains array of size: channel x timepoints x trial
+
+        resultpath: full path to store the distances for each subject.
+
+        OUTPUTS:
+        VQ : combined fly-by distance for each subject and conditions
+        len(VQ) = #subjects,
+        Each entry contains a dictionary where key = condition, value = distances
+        where, distances =  variance time-series per condition
+    """
+
+    # Check if datapath exists
+    if(not os.path.isdir(datapath)):
+        print('ERROR: Data path does not exist...')
+        return
+
+    # Check if result path exists
+    if(not os.path.isdir(resultpath)):
+        print('ERROR: Result path does not exist \n Create a directory to store results.')
+        return
+
+    # List subject files and sort based on names.
+    files = os.listdir(datapath)
+    files.sort()
+    N = len(files)      # Number of Subjects
+
+    VQ = [[] for i in range(N)]  #Between-Trial Variability
+
+    # For each subject, calculate between-trial-vq
+    for sub in range(N):
+        name = files[sub]
+        print('processing subject...' , name)
+        data = spio.loadmat(datapath + name)        # Load matrix file
+
+        # List all conditions
+        all_vars = spio.whosmat(datapath + name)
+        conds = [all_vars[i][0] for i in range(len(all_vars))]
+
+        vq_dist = {}
+
+        # For each experimental condition, calculate VQ
+
+        for args,count in zip(conds,range(len(conds))):
+            trials = data[args]                     # List all trials of condition in 'args'
+            gfp = np.std(trials,0)                  # Calculate GFP
+            trials = np.divide(trials,gfp)      # Divide by GFP
+
+            N_trials = trials.shape[2]
+            T = trials.shape[1]
+
+            vq = np.zeros((T))
+            for t in range(T):
+                vq[:,:,t] = np.nanmean(pdist(trials[:,t,:].T,metric='correlation'))
+            vq_dist[conds[count]] = vq
+        VQ[sub] = vq_dist
+        spio.savemat(resultpath + '/' +  name[:-4] + '_vq.mat',vq_dist)
+
+    return VQ
