@@ -77,20 +77,28 @@ def flyby_dist(templatefile,datapath,resultpath):
 
         for args,count in zip(conds,range(len(conds))):
             trials = data[args]                     # List all trials of condition in 'args'
-            gfp = np.std(trials,0)                  # Calculate GFP
-            trials = np.divide(trials,gfp)      # Divide by GFP
+            if trials.size == 0:
+               print('Condition: ' + conds[count] + ' is empty, keeping distance array empty...\n'),
+               dist[conds[count]] = []
 
-            N_trials = trials.shape[2]
-            T = trials.shape[1]
+            else:
+                if trials.ndim ==2:
+                    print('Condition:' + conds[count]+ ' has only one trial, adding an extra dimension...\n'),
+                    trials = trials[:,:,None]
+                gfp = np.std(trials,0)                  # Calculate GFP
+                trials = np.divide(trials,gfp)      # Divide by GFP
 
-            d = np.zeros((n_clus,N_trials,T))
-            for t in range(T):
-                d[:,:,t] = cdist(trials[:,t,:].T,CC,metric='correlation').T
-            dist[conds[count]] = d
-        D[sub] = dist
-        spio.savemat(resultpath + '/' +  name[:-4] + '_flybys.mat',dist)
+                N_trials = trials.shape[2]
+                T = trials.shape[1]
 
-    return D,keys
+                d = np.zeros((n_clus,N_trials,T))
+                for t in range(T):
+                    d[:,:,t] = cdist(trials[:,t,:].T,CC,metric='correlation').T
+                dist[conds[count]] = d
+            D[sub] = dist
+            spio.savemat(resultpath + '/' +  name[:-4] + '_flybys.mat',dist)
+
+        return D,keys
 
 def between_trial_VQ(datapath,resultpath):
     """ Calculates and saves conditionwise between-trial variability i.e. average correlation distance between each trial-pairs at each time-point for each conditions separately.
