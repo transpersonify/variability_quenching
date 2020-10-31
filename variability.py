@@ -3,6 +3,7 @@ import scipy.io as spio
 import os
 import numpy as np
 from scipy.spatial.distance import cdist,pdist
+import warnings
 
 def flyby_dist(templatefile,datapath,resultpath):
     """ Calculates and saves conditionwise fly-bys i.e. correlation distance between templates and each trial for each conditions separately.
@@ -65,10 +66,10 @@ def flyby_dist(templatefile,datapath,resultpath):
     for sub in range(N):
         name = files[sub]
         print('processing subject...' , name)
-        data = spio.loadmat(datapath + name)        # Load matrix file
+        data = spio.loadmat(os.path.join(datapath, name))        # Load matrix file
 
         # List all conditions
-        all_vars = spio.whosmat(datapath + name)
+        all_vars = spio.whosmat(os.path.join(datapath, name))
         conds = [all_vars[i][0] for i in range(len(all_vars))]
 
         dist = {}
@@ -85,7 +86,7 @@ def flyby_dist(templatefile,datapath,resultpath):
                 if trials.ndim ==2:
                     print('Condition:' + conds[count]+ ' has only one trial, adding an extra dimension...\n'),
                     trials = trials[:,:,None]
-                gfp = np.std(trials,0)                  # Calculate GFP
+                gfp = np.std(trials,0)               # Calculate GFP
                 trials = np.divide(trials,gfp)      # Divide by GFP
 
                 N_trials = trials.shape[2]
@@ -95,10 +96,9 @@ def flyby_dist(templatefile,datapath,resultpath):
                 for t in range(T):
                     d[:,:,t] = cdist(trials[:,t,:].T,CC,metric='correlation').T
                 dist[conds[count]] = d
-            D[sub] = dist
-            spio.savemat(resultpath + '/' +  name[:-4] + '_flybys.mat',dist)
-
-        return D,keys
+        D[sub] = dist
+        spio.savemat(os.path.join(resultpath, name[:-4] + '_flybys.mat'),dist)
+    return D,keys
 
 def between_trial_VQ(datapath,resultpath):
     """ Calculates and saves conditionwise between-trial variability i.e. average correlation distance between each trial-pairs at each time-point for each conditions separately.
@@ -138,10 +138,10 @@ def between_trial_VQ(datapath,resultpath):
     for sub in range(N):
         name = files[sub]
         print('processing subject...' , name)
-        data = spio.loadmat(datapath + name)        # Load matrix file
+        data = spio.loadmat(os.path.join(datapath, name))        # Load matrix file
 
         # List all conditions
-        all_vars = spio.whosmat(datapath + name)
+        all_vars = spio.whosmat(os.path.join(datapath, name))
         conds = [all_vars[i][0] for i in range(len(all_vars))]
 
         vq_dist = {}
@@ -152,8 +152,6 @@ def between_trial_VQ(datapath,resultpath):
             trials = data[args]                     # List all trials of condition in 'args'
             gfp = np.std(trials,0)                  # Calculate GFP
             trials = np.divide(trials,gfp)      # Divide by GFP
-
-            N_trials = trials.shape[2]
             T = trials.shape[1]
 
             vq = np.zeros((T))
@@ -161,6 +159,6 @@ def between_trial_VQ(datapath,resultpath):
                 vq[t] = np.nanmean(pdist(trials[:,t,:].T,metric='correlation'))
             vq_dist[conds[count]] = vq
         VQ[sub] = vq_dist
-        spio.savemat(resultpath + '/' +  name[:-4] + '_vq.mat',vq_dist)
+        spio.savemat(os.path.join(resultpath, name[:-4] + '_vq.mat'),vq_dist)
 
     return VQ
