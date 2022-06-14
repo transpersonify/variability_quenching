@@ -4,4 +4,4 @@ datapath = './sample_inputs'
 resultpath = './sample_outputs'
 
 D,keys = flyby_dist(templatefile,datapath,resultpath)
-#VQ  = between_trial_VQ(datapath,resultpath)
+VQ  = between_trial_VQ(datapath,resultpath)
