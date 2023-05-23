@@ -2,7 +2,7 @@
 import scipy.io as spio
 import os
 import numpy as np
-from scipy.spatial.distance import cdist,pdist
+from scipy.spatial.distance import cdist,pdist,squareform
 import warnings
 
 def flyby_dist(templatefile,datapath,resultpath):
@@ -162,3 +162,81 @@ def between_trial_VQ(datapath,resultpath):
         spio.savemat(os.path.join(resultpath, name[:-4] + '_vq.mat'),vq_dist)
 
     return VQ
+
+
+def within_trial_speed(datapath,resultpath):
+    """ Calculates and saves trialwise within-trial variability 
+        (i.e. for each trial, correlation distance between two-consecutive 
+        time-points). If the trials are average 
+        referenced then this measure is mathematically equivalent to 
+        "directional variance" introduced in 
+        Schurger et al (https://www.pnas.org/doi/10.1073/pnas.1418730112).
+        
+        INPUTS:
+
+        datapath: full path to where the '.mat' file for each subject is stored.
+        Each '.mat' file contains array of size: channel x timepoints x trial
+
+        resultpath: full path to store the within-trial variability measure
+        for each subject.
+
+        OUTPUTS:
+        DVA : combined within-trial speed for each subject and conditions
+            len(D) = #subjects,
+            Each entry contains a dictionary where key = condition, value = within-trial speed.
+            where, within_trial_speed =  N_trials_per_cond x time array - 1 
+
+            Additionally, this function will save conditionwise within-trial speed 
+            in mat file per subject in the resultpath
+
+        
+
+    """
+
+    # Check if datapath exists
+    if(not os.path.isdir(datapath)):
+        print('ERROR: Data path does not exist...')
+        return
+
+    # Check if result path exists
+    if(not os.path.isdir(resultpath)):
+        print('ERROR: Result path does not exist \n Create a directory to store results.')
+        return
+
+    # List subject files and sort based on names.
+    files = os.listdir(datapath)
+    files.sort()
+    N = len(files)      # Number of Subjects
+
+    DVA = [[] for i in range(N)]  #Within-Trial Variability
+
+    # For each subject, calculate between-trial-vq
+    for sub in range(N):
+        name = files[sub]
+        print('processing subject...' , name)
+        data = spio.loadmat(os.path.join(datapath, name))        # Load matrix file
+
+        # List all conditions
+        all_vars = spio.whosmat(os.path.join(datapath, name))
+        conds = [all_vars[i][0] for i in range(len(all_vars))]
+
+        dva_sub= {}
+
+        # For each experimental condition, calculate DVA
+
+        for args,count in zip(conds,range(len(conds))):
+            trials = data[args]                     # List all trials of condition in 'args'
+            gfp = np.std(trials,0)                  # Calculate GFP
+            trials = np.divide(trials,gfp)          # Divide by GFP
+            T = trials.shape[1]                     # Number of timepoints
+            N_t = trials.shape[2]                   # Number of trials
+            dva = np.zeros_like((N_t,T-1))          
+            for trial in range(N_T):
+                diag = squareform(pdist(trials[:,:,trial].T, metric='correlation'))
+                dva[trial, :] = np.diag(x,1)       #Get the first upper diagonal, which is consecutive dist
+            dva_sub[conds[count]] = dva
+            
+        DVA[sub] = dva_sub
+        spio.savemat(os.path.join(resultpath, name[:-4] + '_dva.mat'),dva_dist)
+
+    return DVA
